@@ -137,6 +137,12 @@ def test(model, lat_vecs, device, test_loader, epoch_idx, samples_dir,
             # -------------------------------------------------------
             # ------------ load batch data and reshaping ------------
 
+            # NOTE: inp_posmap:     position map of shape:      [B, 3, 32, 32]
+            # NOTE: target_pc_n:    target point cloud normals: [B, 40000, 3]
+            # NOTE: target_pc:      target point cloud:         [B, 40000, 3]
+            # NOTE: target_names:   target name (filename):     'str'
+            # NOTE: body_verts:     SMPL vertices:              [B, 6890, 3]
+            # NOTE: index:          No idea what
             [inp_posmap, target_pc_n, target_pc, target_names, body_verts, index] = data
             gpu_data = [inp_posmap, target_pc_n, target_pc, body_verts, index]
             [inp_posmap, target_pc_n, target_pc, body_verts, index] = list(map(lambda x: x.to(device, non_blocking=True), gpu_data))
@@ -153,6 +159,7 @@ def test(model, lat_vecs, device, test_loader, epoch_idx, samples_dir,
             N_subsample = pq_samples.shape[1]
 
             # The same body point is shared by all sampled pq points within each patch
+            # NOTE: bp seems to be `base_points`
             bp_locations = inp_posmap.expand(N_subsample, -1, -1,-1,-1).permute([1, 2, 3, 4, 0]) # [B, C, H, W, N_sample]
             transf_mtx_map = transf_mtx_map.expand(N_subsample, -1, -1, -1, -1, -1).permute([1, 2, 3, 0, 4, 5])  # [B, H, W, N_subsample, 3, 3]
 
@@ -160,6 +167,7 @@ def test(model, lat_vecs, device, test_loader, epoch_idx, samples_dir,
             # ------------ model pass an coordinate transformation ---------------
 
             # Core: predict the clothing residual (displacement) from the body, and their normals
+            #       and the prediction of residuals/normals are from pos_map, lat_vec, uv_coords, pq_coords
             pred_res, pred_normals = model(inp_posmap, clo_code=lat_vec_batch,
                                            uv_loc=uv_coord_map_batch,
                                            pq_coords=pq_repeated)
@@ -168,6 +176,7 @@ def test(model, lat_vecs, device, test_loader, epoch_idx, samples_dir,
             pred_res = pred_res.permute([0,2,3,4,1]).unsqueeze(-1)
             pred_normals = pred_normals.permute([0, 2, 3, 4, 1]).unsqueeze(-1)
 
+            # is this in homogeneous coordinates?
             pred_res = torch.matmul(transf_mtx_map, pred_res).squeeze(-1)
             pred_normals = torch.matmul(transf_mtx_map, pred_normals).squeeze(-1)
             pred_normals = torch.nn.functional.normalize(pred_normals, dim=-1)

@@ -4,6 +4,7 @@ import sys
 import time
 from datetime import date, datetime
 import math
+from icecream import ic
 
 PROJECT_DIR = dirname(realpath(__file__))
 LOGS_PATH = join(PROJECT_DIR, 'checkpoints')
@@ -16,7 +17,7 @@ from torch.utils.tensorboard import SummaryWriter
 import numpy as np
 
 from lib.config_parser import parse_config
-from lib.dataset import CloDataSet   
+from lib.dataset import CloDataSet
 from lib.network import SCALE
 from lib.train_eval_funcs import train, test
 from lib.utils_io import load_masks, save_model, save_latent_vectors, load_latent_vectors
@@ -191,6 +192,13 @@ def main():
     test_set = CloDataSet(root_dir=data_root, split='test', sample_spacing=args.data_spacing,
                           img_size=args.img_size, scan_npoints=args.scan_npoints)
     test_loader = DataLoader(test_set, batch_size=args.batch_size, shuffle=True, num_workers=4)
+    ic(type(test_set[0]), len(test_set[0]))
+    ic(type(test_set[0][0]), test_set[0][0].shape,
+       type(test_set[0][1]), test_set[0][1].shape,
+       type(test_set[0][2]), test_set[0][2].shape,
+       type(test_set[0][3]), test_set[0][3],
+       type(test_set[0][4]), test_set[0][4].shape,
+       type(test_set[0][5]), test_set[0][5].shape)
     
     print('Eval on test data...')
     start = time.time()
